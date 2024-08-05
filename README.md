@@ -13,7 +13,7 @@ The `RunAllRules` script performs the following tasks:
 6. Add a button to the Outlook Ribbon to run all rules.
 7. To speed up the process, hit Cancel after a few seconds to move to the next rule. The script processes top-down, so there's no need to wait for full completion.
 
-
+    
 ## Script
 
 ```vba
@@ -59,3 +59,52 @@ Sub RunAllRules()
     ' Display a message box indicating all rules have been executed or skipped
     MsgBox "All rules have been executed or skipped.", vbInformation
 End Sub
+```
+
+#### Optional: Create and Add a Signature for the Script
+
+1. Generate a self-signed certificate:
+
+    ```powershell
+    $cert = New-SelfSignedCertificate -Type Custom -Subject "CN=RunAllRules" -KeySpec Signature -CertStoreLocation "Cert:\CurrentUser\My" -KeyExportPolicy Exportable -KeyLength 2048 -HashAlgorithm sha256 -Provider "Microsoft Enhanced RSA and AES Cryptographic Provider" -NotAfter (Get-Date).AddYears(5)
+    ```
+
+2. Convert the password to a secure string:
+
+    ```powershell
+    $pwd = ConvertTo-SecureString -String "NEWPASSWORD" -Force -AsPlainText
+    ```
+
+3. Export the certificate to a PFX file:
+
+    ```powershell
+    Export-PfxCertificate -Cert $cert -FilePath "C:\Users\USER\Documents\RunAllRules.pfx" -Password $pwd
+    ```
+
+Replace `"NEWPASSWORD"` with your desired password and update the file path as needed.
+
+4. Import the certificate into the Personal store:
+
+    ```powershell
+    Import-PfxCertificate -FilePath "C:\Users\USER\Documents\RunAllRules.pfx" -CertStoreLocation "Cert:\CurrentUser\My" -Password $pwd
+    ```
+
+5. Add the certificate to the Trusted Root Certification Authorities (TRCA) store:
+
+    ```powershell
+    $cert = Get-ChildItem -Path "Cert:\CurrentUser\My" | Where-Object { $_.Subject -eq "CN=RunAllRules" }
+    Import-Certificate -FilePath $cert.PSPath -CertStoreLocation "Cert:\CurrentUser\Root"
+    ```
+
+6. Open Outlook and press `Alt + F11` to open the VBA editor.
+
+7. In the VBA editor, go to `Tools` > `Digital Signature...`.
+
+8. In the `Digital Signature` dialog box, click `Choose...`.
+
+9. Select the certificate you created (`RunAllRules`) from the list and click `OK`.
+
+10. Click `OK` again to close the `Digital Signature` dialog box.
+
+11. Save your VBA project by going to `File` > `Save`.
+
